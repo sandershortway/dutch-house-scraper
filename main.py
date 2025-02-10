@@ -11,23 +11,26 @@ def main():
         # Initialize the scraper
         scraper = FundaScraper(url)
 
-        # Parse data from the URL
         address = scraper.parse_property_address()
         price = scraper.parse_property_price()
         feature_table = scraper._parse_feature_table()
+        listing_date = scraper.parse_listing_date()
 
         if address:
             print(f"\nAddress: {address}")
         if price:
-            print(f"Price: {price}")
+            print(f"\nPrice: €{price:,.2f}")
+        if listing_date:
+            print(f"\nListed since: {listing_date}")
         if feature_table:
-            print(f"Other Features: {feature_table}")
+            print("\nFeatures:")
+            for key, value in feature_table.items():
+                print(f"{key}: {value}")
 
         # Clean up
         scraper.close()
-
     except Exception as e:
-        print(f"An error occurred: {str(e)}")
+        print(f"Error: {str(e)}")
 
 
 if __name__ == "__main__":
