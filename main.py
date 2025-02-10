@@ -8,19 +8,20 @@ def main():
     url = "https://www.funda.nl/en/detail/koop/leiden/huis-vondellaan-26/43889182/"
 
     try:
-        # Initialize and run the scraper
+        # Initialize the scraper
         scraper = FundaScraper(url)
 
-        print(scraper._parse_feature_table())
-
-        # Get address and price for completeness
+        # Parse data from the URL
         address = scraper.parse_property_address()
         price = scraper.parse_property_price()
+        feature_table = scraper._parse_feature_table()
 
         if address:
             print(f"\nAddress: {address}")
         if price:
             print(f"Price: {price}")
+        if feature_table:
+            print(f"Other Features: {feature_table}")
 
         # Clean up
         scraper.close()

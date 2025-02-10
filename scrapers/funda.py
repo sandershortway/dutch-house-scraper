@@ -2,7 +2,7 @@
 
 import json
 import re
-from typing import Any, Dict, Optional
+from typing import Dict, List, Optional
 
 from scrapers.base import BaseScraper
 from utils.utils import parse_address_line
@@ -24,23 +24,44 @@ class FundaScraper(BaseScraper):
         self.soup = self.get_soup()
         self.feature_table: dict = self._parse_feature_table()
 
-    def _find_script_tag(self) -> Dict[str, Any]:
-        """Extract and parse the JSON-LD script tag containing property metadata.
+    def _find_script_tag(self) -> List[Dict]:
+        """Extract and parse the JSON-LD script tags containing property metadata.
 
         Returns:
-            Dict containing the parsed JSON-LD data
+            List containing the merged JSON-LD data from all script tags.
 
         Raises:
-            ValueError: If the script tag is not found or contains invalid JSON
+            ValueError: If no script tags are found or if they contain invalid JSON
         """
-        script_tag = self.soup.find("script", type="application/ld+json")
-        if not script_tag:
-            raise ValueError("Could not find JSON-LD script tag")
+        script_tags = self.soup.find_all("script", type="application/ld+json")
+        if not script_tags:
+            raise ValueError("Could not find JSON-LD script tags")
 
         try:
-            return json.loads(script_tag.string)
+            metadata = [json.loads(tag.string) for tag in script_tags]
         except json.JSONDecodeError as e:
             raise ValueError(f"Failed to parse JSON-LD data: {str(e)}")
+
+        return metadata
+
+    def _get_neighbourhood(self) -> Optional[str]:
+        """Extract the neighbourhood from the JSON-LD data.
+
+        Returns:
+            The province name if found, None otherwise
+        """
+        try:
+            metadata = self._find_script_tag()
+
+            # Check each metadata dictionary for the province information
+            for data in metadata:
+                if "itemListElement" in data:
+                    item_list = data["itemListElement"]
+                    return item_list[2]["item"]["name"]
+            return None
+        except ValueError as e:
+            print(f"Warning: Could not extract province: {str(e)}")
+            return None
 
     def _get_province(self) -> Optional[str]:
         """Extract the province (addressRegion) from the JSON-LD data.
@@ -49,8 +70,12 @@ class FundaScraper(BaseScraper):
             The province name if found, None otherwise
         """
         try:
-            data = self._find_script_tag()
-            return data.get("address", {}).get("addressRegion")
+            metadata = self._find_script_tag()
+            # Check each metadata dictionary for the province information
+            for data in metadata:
+                if "address" in data and data["address"].get("addressRegion"):
+                    return data["address"]["addressRegion"]
+            return None
         except ValueError as e:
             print(f"Warning: Could not extract province: {str(e)}")
             return None
@@ -128,6 +153,7 @@ class FundaScraper(BaseScraper):
         try:
             address = parse_address_line(self.soup.title.string)
             address.province = self._get_province()
+            address.neighbourhood = self._get_neighbourhood()
             return address
         except ValueError as e:
             print(f"Warning: Failed to parse address: {str(e)}")
@@ -139,8 +165,11 @@ class FundaScraper(BaseScraper):
             The property price as a float if available, None otherwise
         """
         try:
-            data = self._find_script_tag()
-            price = data.get("offers", {}).get("price")
+            metadata = self._find_script_tag()
+
+            for data in metadata:
+                if "offers" in data and data["offers"].get("price"):
+                    price = data["offers"]["price"]
             return float(price) if price is not None else None
         except (ValueError, TypeError) as e:
             print(f"Warning: Failed to parse price: {str(e)}")
