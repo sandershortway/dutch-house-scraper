@@ -1,0 +1,5 @@
+.venv/
+.vscode/
+cached_pages/
+__pycache__/
+*.pyc
