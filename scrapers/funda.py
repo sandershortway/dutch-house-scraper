@@ -22,7 +22,7 @@ class FundaScraper(BaseScraper):
         """
         super().__init__(url)
         self.soup = self.get_soup()
-        self.kenmerken_table: dict = self._parse_kenmerken_table()
+        self.feature_table: dict = self._parse_feature_table()
 
     def _find_script_tag(self) -> Dict[str, Any]:
         """Extract and parse the JSON-LD script tag containing property metadata.
@@ -83,13 +83,13 @@ class FundaScraper(BaseScraper):
         match = re.search(r"(\d+)\s*m²", text)
         return int(match.group(1)) if match else None
 
-    def _parse_kenmerken_table(self) -> dict:
-        """Parse kenmerken table and extract key-value pairs.
+    def _parse_feature_table(self) -> dict:
+        """Parse feature table and extract key-value pairs.
 
         Returns:
             A dictionary where keys are the text within <dt> tags and values are the text within the <dd> tags right after.
         """
-        kenmerken_dict = {}
+        feature_dict = {}
         try:
             # Find all <h3> tags
             for h3 in self.soup.find_all("h3"):
@@ -106,14 +106,14 @@ class FundaScraper(BaseScraper):
                         value = dd.text.strip()
                         span = dd.find("span")
                         if span:
-                            kenmerken_dict[key] = span.text.strip()
+                            feature_dict[key] = span.text.strip()
                         else:
-                            kenmerken_dict[key] = value
+                            feature_dict[key] = value
 
         except Exception as e:
-            print(f"Warning: Failed to parse kenmerken: {str(e)}")
+            print(f"Warning: Failed to parse feature: {str(e)}")
 
-        return kenmerken_dict
+        return feature_dict
 
     def parse_property_address(self):
         """Parse the complete property address from the page title and JSON-LD data.

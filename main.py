@@ -5,13 +5,13 @@ from scrapers.funda import FundaScraper
 
 def main():
     """Run the Funda scraper on a test URL."""
-    url = "https://www.funda.nl/detail/koop/leiden/huis-vondellaan-26/43889182/"
+    url = "https://www.funda.nl/en/detail/koop/leiden/huis-vondellaan-26/43889182/"
 
     try:
         # Initialize and run the scraper
         scraper = FundaScraper(url)
 
-        print(scraper._parse_kenmerken_table())
+        print(scraper._parse_feature_table())
 
         # Get address and price for completeness
         address = scraper.parse_property_address()
