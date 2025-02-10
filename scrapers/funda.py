@@ -108,6 +108,43 @@ class FundaScraper(BaseScraper):
         match = re.search(r"(\d+)\s*m²", text)
         return int(match.group(1)) if match else None
 
+    def parse_listing_date(self) -> Optional[str]:
+        """Extract the listing date from the JSON data in the script tag.
+
+        Returns:
+            The listing date as a string if found, None otherwise
+        """
+        try:
+            # Find the script tag containing the __NUXT_DATA__
+            script_tag = self.soup.find("script", {"id": "__NUXT_DATA__"})
+            if not script_tag:
+                return None
+
+            # Parse the JSON data
+            data = json.loads(script_tag.string)
+
+            # Convert data to a flat list to make it easier to search
+            flat_data = []
+            for item in data:
+                if isinstance(item, (list, dict)):
+                    flat_data.extend(str(x) for x in item)
+                else:
+                    flat_data.append(str(item))
+
+            # Find the index of the target string
+            try:
+                target_index = flat_data.index("overdracht-aangeboden-sinds")
+                # The listing date should be 2 positions after our target
+                if target_index + 2 < len(flat_data):
+                    return flat_data[target_index + 2]
+            except ValueError:
+                return None
+
+            return None
+        except (json.JSONDecodeError, AttributeError) as e:
+            print(f"Warning: Failed to parse listing date: {str(e)}")
+            return None
+
     def _parse_feature_table(self) -> dict:
         """Parse feature table and extract key-value pairs.
 
