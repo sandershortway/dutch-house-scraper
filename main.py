@@ -1,37 +1,72 @@
 """Main script to test the Funda web scraper."""
 
+import random
+import time
+
 from scrapers.funda import FundaScraper
+from utils.request_manager import RequestManager
 
 
 def main():
-    """Run the Funda scraper on a test URL."""
-    url = "https://www.funda.nl/en/detail/koop/leiden/huis-vondellaan-26/43889182/"
+    """Run the Funda scraper on URLs from the request file.
 
-    try:
-        # Initialize the scraper
-        scraper = FundaScraper(url)
+    This function processes each URL in the request file, scraping property
+    information using the FundaScraper. It includes rate limiting to avoid
+    overwhelming the server.
+    """
+    request_manager = RequestManager("example_requests.json")
 
-        address = scraper.parse_property_address()
-        price = scraper.parse_property_price()
-        feature_table = scraper._parse_feature_table()
-        listing_date = scraper.parse_listing_date()
+    for url in request_manager.get_urls():
+        print(f"\nProcessing: {url}")
+        try:
+            # Initialize the scraper and get listing information
+            scraper = FundaScraper(url)
+            listing = scraper.get_listing()
 
-        if address:
-            print(f"\nAddress: {address}")
-        if price:
-            print(f"\nPrice: €{price:,.2f}")
-        if listing_date:
-            print(f"\nListed since: {listing_date}")
-        if feature_table:
-            print("\nFeatures:")
-            for key, value in feature_table.items():
-                print(f"{key}: {value}")
+            # Print listing information
+            print("\nListing Details:")
+            if listing.address:
+                print(f"Address: {listing.address.street} {listing.address.number}")
+                print(f"Location: {listing.address.city} ({listing.address.zip_code})")
+                if listing.address.neighbourhood:
+                    print(f"Neighbourhood: {listing.address.neighbourhood}")
 
-        # Clean up
-        scraper.close()
-    except Exception as e:
-        print(f"Error: {str(e)}")
+            if listing.price:
+                if listing.price.asking_price:
+                    print(f"Asking Price: €{listing.price.asking_price:,.2f}")
+                if listing.price.asking_price_per_square_meter:
+                    print(
+                        f"Price per m²: €{listing.price.asking_price_per_square_meter:,.2f}"
+                    )
+
+            if listing.property:
+                print("\nProperty Details:")
+                if listing.property.type:
+                    print(f"Type: {listing.property.type}")
+                if listing.property.living_area:
+                    print(f"Living Area: {listing.property.living_area} m²")
+                if listing.property.num_rooms:
+                    print(f"Number of Rooms: {listing.property.num_rooms}")
+                if listing.property.build_year:
+                    print(f"Build Year: {listing.property.build_year}")
+                if listing.property.energylabel:
+                    print(f"Energy Label: {listing.property.energylabel}")
+
+            # Clean up resources
+            scraper.close()
+
+            # Rate limiting
+            sleep_time = random.uniform(1, 5)
+            print(f"\nSleeping for {sleep_time:.2f} seconds...")
+            time.sleep(sleep_time)
+
+        except Exception as e:
+            print(f"Error processing {url}: {str(e)}")
+            continue
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        print(f"Error: {str(e)}")

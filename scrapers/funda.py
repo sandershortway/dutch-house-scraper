@@ -4,6 +4,7 @@ import json
 import re
 from typing import Dict, List, Optional
 
+from models import Address, Price, Property
 from scrapers.base import BaseScraper
 from utils.utils import parse_address_line
 
@@ -22,7 +23,7 @@ class FundaScraper(BaseScraper):
         """
         super().__init__(url)
         self.soup = self.get_soup()
-        self.feature_table: dict = self._parse_feature_table()
+        self.feature_table: dict = self._get_feature_table()
 
     def _find_script_tag(self) -> List[Dict]:
         """Extract and parse the JSON-LD script tags containing property metadata.
@@ -145,7 +146,7 @@ class FundaScraper(BaseScraper):
             print(f"Warning: Failed to parse listing date: {str(e)}")
             return None
 
-    def _parse_feature_table(self) -> dict:
+    def _get_feature_table(self) -> dict:
         """Parse feature table and extract key-value pairs.
 
         Returns:
@@ -177,7 +178,7 @@ class FundaScraper(BaseScraper):
 
         return feature_dict
 
-    def parse_property_address(self):
+    def get_property_address(self) -> Address:
         """Parse the complete property address from the page title and JSON-LD data.
 
         Returns:
@@ -195,22 +196,138 @@ class FundaScraper(BaseScraper):
         except ValueError as e:
             print(f"Warning: Failed to parse address: {str(e)}")
 
-    def parse_property_price(self) -> Optional[float]:
-        """Parse the property price from the JSON-LD data.
+    def get_property_price(self) -> Price:
+        """Extract and parse price information from the JSON-LD data.
+
+        This method retrieves various price-related details from the property listing,
+        including the asking price and price per square meter. For sold properties,
+        it will attempt to extract the sale price if available.
 
         Returns:
-            The property price as a float if available, None otherwise
+            Price: A Price object containing the parsed price information.
+                  Fields may be None if data is missing or cannot be parsed.
+
+        Note:
+            - All prices are converted to float values
+            - Prices are expected to be in EUR
+            - Returns an empty Price object with None values if parsing fails
         """
+        price_information = Price()
+
         try:
             metadata = self._find_script_tag()
+            price = None
+            living_area = None
 
             for data in metadata:
-                if "offers" in data and data["offers"].get("price"):
-                    price = data["offers"]["price"]
-            return float(price) if price is not None else None
-        except (ValueError, TypeError) as e:
-            print(f"Warning: Failed to parse price: {str(e)}")
+                # Extract asking price from offers
+                if "offers" in data and isinstance(data["offers"], dict):
+                    price = data["offers"].get("price")
+
+            # Set asking price
+            if price is not None:
+                try:
+                    price_information.asking_price = float(price)
+
+                    # Calculate price per square meter if both price and area are available
+                    if living_area and float(living_area) > 0:
+                        price_information.asking_price_per_square_meter = (
+                            price_information.asking_price / float(living_area)
+                        )
+                except (ValueError, TypeError):
+                    print("Warning: Failed to convert price to float")
+
+        except (KeyError, ValueError, TypeError, AttributeError) as e:
+            print(f"Warning: Failed to parse price information: {str(e)}")
+            return Price()  # Return empty Price object with None values
+
+        return price_information
+
+    def get_property_type(self) -> str:
+        """Extract and parse the property type from the feature table.
+
+        This method retrieves the property type from either the 'Soort woonhuis' or
+        'Soort appartement' field in the feature table. For properties with multiple
+        type descriptions (comma-separated), only the first type is returned.
+
+        Returns:
+            str: The property type (e.g., "Eengezinswoning", "Portiekflat").
+                 Returns None if the type cannot be determined.
+
+        Note:
+            - Only returns the part before the comma if multiple types are present
+            - Handles both house and apartment type fields
+        """
+        try:
+            feature_table = self._get_feature_table()
+
+            # Try both house and apartment type fields
+            property_type = feature_table.get("Soort woonhuis") or feature_table.get(
+                "Soort appartement"
+            )
+
+            # Ignore whatever is within the brackets
+            property_type = re.sub(r"\(.*\)", "", property_type)
+
+            if not property_type:
+                raise ValueError("No property type found in feature table")
+
+            # If there's a comma, only take the first part
+            return property_type.split(",")[0].strip()
+
+        except (KeyError, ValueError, AttributeError) as e:
+            print(f"Warning: Failed to parse property type: {str(e)}")
             return None
+
+    def get_property_information(self) -> Property:
+        """Extract and parse property information from the feature table.
+
+        This method retrieves key property details including energy label, living area,
+        number of rooms, and build year from the Funda feature table. It handles
+        potential missing or malformed data gracefully.
+
+        Returns:
+            Property: A Property object containing the parsed information.
+                     Fields may be None if data is missing or cannot be parsed.
+
+        Note:
+            - Living area is converted from string (e.g., "100 m²") to integer
+            - Build year and number of rooms are converted to integers
+            - Energy label is kept as string (e.g., "A", "B+", etc.)
+        """
+        try:
+            feature_table = self._get_feature_table()
+
+            # Extract and clean living area (convert "120 m²" to 120)
+            living_area_str = feature_table.get("Wonen", "0 m²")
+            living_area = int(living_area_str.split()[0]) if living_area_str else None
+
+            # Extract and convert number of rooms to integer
+            num_rooms_str = feature_table.get("Aantal kamers", "0")
+            num_rooms = int(num_rooms_str.split()[0]) if num_rooms_str else None
+
+            # Extract and convert build year to integer
+            build_year_str = feature_table.get("Bouwjaar")
+            build_year = (
+                int(build_year_str)
+                if build_year_str and build_year_str.isdigit()
+                else None
+            )
+
+            # Energy label is kept as string
+            energylabel = feature_table.get("Energielabel")
+
+            return Property(
+                energylabel=energylabel,
+                living_area=living_area,
+                num_rooms=num_rooms,
+                build_year=build_year,
+                type=self.get_property_type(),
+            )
+
+        except (KeyError, ValueError, TypeError) as e:
+            print(f"Warning: Failed to parse property information: {str(e)}")
+            return Property()
 
     def close(self) -> None:
         """Clean up resources by closing the request handler."""

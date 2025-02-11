@@ -1,26 +1,32 @@
 from abc import ABC, abstractmethod
-from enum import Enum
 from pathlib import Path
 from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
 
+from models import Address, Listing, Price, Property, Website
 from utils.request_handler import RequestHandler
 from utils.utils import is_valid_url
 
 
-class Website(Enum):
-    FUNDA = "funda"
-    HUISLIJN = "huislijn"
-
-
 class BaseScraper(ABC):
-    def __init__(self, url):
+    def __init__(self, url: str):
         self.request_handler = RequestHandler()
+
         if is_valid_url(url):
             self.url: str = url
         else:
             raise ValueError(f"Invalid url: '{url}'")
+
+        self.website: Website = self._get_website()
+
+    def _get_website(self) -> Website:
+        """Get website from url."""
+        if "funda" in self.url:
+            return Website.FUNDA
+        if "huislijn" in self.url:
+            return Website.HUISLIJN
+        raise ValueError(f"Unknown website encountered in url: {self.url}")
 
     def _get_safe_filename(self) -> str:
         """Generate a safe filename from the URL.
@@ -71,9 +77,22 @@ class BaseScraper(ABC):
             self.request_handler.close()
 
     @abstractmethod
-    def parse_property_address(self, html_content):
+    def get_property_address(self) -> Address:
         pass
 
     @abstractmethod
-    def parse_property_price(self, html_content):
+    def get_property_price(self) -> Price:
         pass
+
+    @abstractmethod
+    def get_property_information(self) -> Property:
+        pass
+
+    def get_listing(self) -> Listing:
+        return Listing(
+            self.get_property_address(),
+            self.get_property_information(),
+            self.get_property_price(),
+            self.website,
+            self.url,
+        )

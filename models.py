@@ -5,9 +5,9 @@ from enum import Enum
 from typing import Optional
 
 
-class HouseType(Enum):
-    APARTMENT: str = "Apartment"
-    HOUSE: str = "House"
+class Website(Enum):
+    FUNDA = "funda"
+    HUISLIJN = "huislijn"
 
 
 @dataclass
@@ -20,8 +20,18 @@ class Address:
     zip_code: str = None
     neighbourhood: Optional[str] = None
     province: Optional[str] = None
-    type: Optional[str] = None
     country: str = "The Netherlands"
+
+
+@dataclass
+class Property:
+    """Data class representing Dutch property information."""
+
+    energylabel: str = None
+    living_area: int = None
+    num_rooms: int = None
+    build_year: int = None
+    type: str = None
 
 
 @dataclass
@@ -31,3 +41,14 @@ class Price:
     asking_price: float = None
     asking_price_per_square_meter: float = None
     sale_price: Optional[float] = None
+
+
+@dataclass
+class Listing:
+    """Data class representing a Dutch property listing."""
+
+    address: Address = None
+    property: Property = None
+    price: Price = None
+    website: Website = None
+    url: str = None
