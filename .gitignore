@@ -1,5 +1,6 @@
 .venv/
 .vscode/
 cached_pages/
+databases/
 __pycache__/
 *.pyc

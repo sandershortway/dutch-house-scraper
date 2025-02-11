@@ -4,6 +4,7 @@ import json
 import re
 from typing import Dict, List, Optional
 
+from models import Address, Listing
 from scrapers.base import BaseScraper
 from utils.utils import parse_address_line
 
@@ -177,13 +178,14 @@ class FundaScraper(BaseScraper):
 
         return feature_dict
 
-    def parse_property_address(self):
+    def parse_property_address(self) -> Address:
         """Parse the complete property address from the page title and JSON-LD data.
 
         Returns:
             Address object containing all available address components,
             or None if parsing fails
         """
+        feature_table = self._parse_feature_table()
         if not self.soup or not self.soup.title:
             return None
 
@@ -211,6 +213,9 @@ class FundaScraper(BaseScraper):
         except (ValueError, TypeError) as e:
             print(f"Warning: Failed to parse price: {str(e)}")
             return None
+
+    def get_listing(self) -> Listing:
+        return super().get_listing()
 
     def close(self) -> None:
         """Clean up resources by closing the request handler."""
