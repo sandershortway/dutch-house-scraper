@@ -8,8 +8,7 @@ def main():
     """Run the Funda scraper on URLs from the request file.
 
     This function processes each URL in the request file, scraping property
-    information using the FundaScraper. It includes rate limiting to avoid
-    overwhelming the server.
+    information using the FundaScraper.
     """
     request_manager = RequestManager("example_requests.json")
 
@@ -53,11 +52,6 @@ def main():
 
             # Clean up resources
             scraper.close()
-
-            # Rate limiting
-            # sleep_time = random.uniform(1, 5)
-            # print(f"\nSleeping for {sleep_time:.2f} seconds...")
-            # time.sleep(sleep_time)
 
         except Exception as e:
             print(f"Error processing {url}: {str(e)}")
