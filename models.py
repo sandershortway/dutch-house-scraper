@@ -10,12 +10,6 @@ class Website(Enum):
     HUISLIJN = "huislijn"
 
 
-class PropertyType(Enum):
-    APARTMENT: str = "Apartment"
-    HOUSE: str = "House"
-    MAISONETTE: str = "Maisonette"
-
-
 @dataclass
 class Address:
     """Data class representing a Dutch property address."""
@@ -36,6 +30,8 @@ class Property:
     energylabel: str = None
     living_area: int = None
     num_rooms: int = None
+    build_year: int = None
+    type: str = None
 
 
 @dataclass
@@ -52,7 +48,7 @@ class Listing:
     """Data class representing a Dutch property listing."""
 
     address: Address = None
-    type: PropertyType = None
+    property: Property = None
     price: Price = None
     website: Website = None
     url: str = None
