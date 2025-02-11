@@ -2,7 +2,7 @@
 
 import re
 
-from models import Address
+from models.scraper_models import Address
 
 
 def parse_address_line(title: str) -> Address:

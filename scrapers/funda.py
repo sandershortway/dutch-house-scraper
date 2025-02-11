@@ -4,7 +4,8 @@ import json
 import re
 from typing import Dict, List, Optional
 
-from models import Address, Price, Property
+from models.listing_status import ListingStatus
+from models.scraper_models import Address, Price, Property
 from scrapers.base import BaseScraper
 from utils.utils import parse_address_line
 
@@ -81,33 +82,21 @@ class FundaScraper(BaseScraper):
             print(f"Warning: Could not extract province: {str(e)}")
             return None
 
-    def _extract_number_from_text(self, text: str) -> Optional[int]:
-        """Extract the first number from a text string.
+    def get_listing_status(self) -> ListingStatus:
+        try:
+            feature_table = self._get_feature_table()
 
-        Args:
-            text: Text containing a number
+            # Try both house and apartment type fields
+            status = feature_table.get("Status")
 
-        Returns:
-            The first number found in the text, or None if no number is found
-        """
-        if not text:
+            if not status:
+                raise ValueError("No status found in feature table")
+
+            return ListingStatus.from_string(status)
+
+        except (KeyError, ValueError, AttributeError) as e:
+            print(f"Warning: Failed to parse status: {str(e)}")
             return None
-        match = re.search(r"\d+", text)
-        return int(match.group()) if match else None
-
-    def _extract_area_from_text(self, text: str) -> Optional[int]:
-        """Extract square meter value from text.
-
-        Args:
-            text: Text containing square meter value (e.g., "83 m²")
-
-        Returns:
-            The square meter value as an integer, or None if not found
-        """
-        if not text:
-            return None
-        match = re.search(r"(\d+)\s*m²", text)
-        return int(match.group(1)) if match else None
 
     def parse_listing_date(self) -> Optional[str]:
         """Extract the listing date from the JSON data in the script tag.

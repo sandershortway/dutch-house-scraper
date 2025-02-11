@@ -1,8 +1,5 @@
 """Main script to test the Funda web scraper."""
 
-import random
-import time
-
 from scrapers.funda import FundaScraper
 from utils.request_manager import RequestManager
 
@@ -32,12 +29,14 @@ def main():
                     print(f"Neighbourhood: {listing.address.neighbourhood}")
 
             if listing.price:
+                print(f"Status: {listing.status.value}")
                 if listing.price.asking_price:
                     print(f"Asking Price: €{listing.price.asking_price:,.2f}")
                 if listing.price.asking_price_per_square_meter:
                     print(
                         f"Price per m²: €{listing.price.asking_price_per_square_meter:,.2f}"
                     )
+                print(f"Listing date: {scraper.parse_listing_date()}")
 
             if listing.property:
                 print("\nProperty Details:")
@@ -56,9 +55,9 @@ def main():
             scraper.close()
 
             # Rate limiting
-            sleep_time = random.uniform(1, 5)
-            print(f"\nSleeping for {sleep_time:.2f} seconds...")
-            time.sleep(sleep_time)
+            # sleep_time = random.uniform(1, 5)
+            # print(f"\nSleeping for {sleep_time:.2f} seconds...")
+            # time.sleep(sleep_time)
 
         except Exception as e:
             print(f"Error processing {url}: {str(e)}")

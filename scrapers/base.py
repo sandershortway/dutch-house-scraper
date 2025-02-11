@@ -4,7 +4,7 @@ from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
 
-from models import Address, Listing, Price, Property, Website
+from models.scraper_models import Address, Listing, Price, Property, Website
 from utils.request_handler import RequestHandler
 from utils.utils import is_valid_url
 
@@ -88,6 +88,10 @@ class BaseScraper(ABC):
     def get_property_information(self) -> Property:
         pass
 
+    @abstractmethod
+    def get_listing_status(self) -> str:
+        pass
+
     def get_listing(self) -> Listing:
         return Listing(
             self.get_property_address(),
@@ -95,4 +99,5 @@ class BaseScraper(ABC):
             self.get_property_price(),
             self.website,
             self.url,
+            self.get_listing_status(),
         )

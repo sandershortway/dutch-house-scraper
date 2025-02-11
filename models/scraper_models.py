@@ -52,3 +52,4 @@ class Listing:
     price: Price = None
     website: Website = None
     url: str = None
+    status: str = None
